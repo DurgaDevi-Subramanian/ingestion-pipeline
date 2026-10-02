@@ -20,7 +20,7 @@ t_tables = time.perf_counter() - start
 
 lines = []
 for t in tables:
-    lines.append(f"## Table (page {t['page']})")
+    lines.append(f"## Table (page {t['page']}, strategy: {t['strategy']})")
     for row in t["rows"]:
         lines.append(" | ".join(cell or "" for cell in row))
     lines.append("")

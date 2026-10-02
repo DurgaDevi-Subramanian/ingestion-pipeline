@@ -15,6 +15,24 @@ def extract_text_pypdf(pdf_path: str) -> str:
     return "\n\n".join(pages)
 
 
+TABLE_STRATEGIES = [
+    ("lines", {}),
+    ("hybrid", {"vertical_strategy": "text", "horizontal_strategy": "lines"}),
+    ("text", {"vertical_strategy": "text", "horizontal_strategy": "text"}),
+]
+
+
+def find_tables_on_page(page):
+    """Try each strategy in order and return the first sensible result."""
+    for name, settings in TABLE_STRATEGIES:
+        found = page.extract_tables(table_settings=settings)
+        # Keep only real-looking tables: at least 2 rows and 2 columns
+        found = [t for t in found if len(t) >= 2 and max(len(r) for r in t) >= 2]
+        if found:
+            return name, found
+    return None, []
+
+
 def extract_tables_and_images(pdf_path: str, out_dir: str):
     """Function 2: pull tables (pdfplumber) and save images as files."""
     out = Path(out_dir)
@@ -25,18 +43,17 @@ def extract_tables_and_images(pdf_path: str, out_dir: str):
 
     with pdfplumber.open(pdf_path) as pdf:
         for page_number, page in enumerate(pdf.pages, start=1):
-            # Tables: each table is a list of rows, each row a list of cells
-            for table in page.extract_tables():
-                tables.append({"page": page_number, "rows": table})
+            strategy, page_tables = find_tables_on_page(page)
+            for table in page_tables:
+                tables.append({"page": page_number, "strategy": strategy, "rows": table})
 
-            # Images: crop the region of the page where each image sits
             for index, img in enumerate(page.images, start=1):
                 x0 = max(img["x0"], 0)
                 top = max(img["top"], 0)
                 x1 = min(img["x1"], page.width)
                 bottom = min(img["bottom"], page.height)
                 if x1 - x0 < 20 or bottom - top < 20:
-                    continue  # skip tiny decorations
+                    continue
                 path = out / f"page{page_number}_img{index}.png"
                 page.crop((x0, top, x1, bottom)).to_image(resolution=150).save(str(path))
                 image_files.append(str(path))
