@@ -24,10 +24,12 @@ def _analyze_bytes(data: bytes) -> str:
     return poller.result().content
 
 
-def extract_pdf_azure(pdf_path: str, pages_per_request: int = 2) -> str:
+def extract_pdf_azure(pdf_path: str, pages_per_request: int = 2, max_pages: int | None = None) -> str:
     """Split the PDF into small pieces (free-tier limit) and join the results."""
     reader = PdfReader(pdf_path)
     total = len(reader.pages)
+    if max_pages:
+        total = min(total, max_pages)
     parts = []
 
     for start in range(0, total, pages_per_request):
