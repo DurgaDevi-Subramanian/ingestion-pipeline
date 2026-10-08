@@ -3,3 +3,5 @@
 __pycache__/
 data/output/
 data/pdfs/
+data/web_pdf/
+data/web_html/

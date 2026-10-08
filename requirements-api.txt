@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+python-multipart
+python-dotenv
+requests
+beautifulsoup4
+lxml
+pypdf
+pdfplumber
+pytesseract
+Pillow
+boto3
+markitdown[pdf]
