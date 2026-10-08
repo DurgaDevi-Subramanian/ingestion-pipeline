@@ -7,6 +7,7 @@ from app.extract_pdf_oss import (
     extract_tables_and_images,
     ocr_images,
     extract_text_with_ocr_fallback,
+    extract_in_reading_order,
 )
 
 pdf_path = sys.argv[1]  # e.g. data/pdfs/paper1.pdf
@@ -55,3 +56,10 @@ print(f"{name}: {len(text)} characters of text in {t_text:.1f}s")
 print(f"{len(tables)} tables and {len(images)} images in {t_tables:.1f}s")
 print(f"OCR on {len(images)} images in {t_ocr_images:.1f}s")
 print(f"Pages that needed OCR fallback: {ocr_pages or 'none'} ({t_fallback:.1f}s)")
+
+# 5. Everything together, in reading order (like Azure's Markdown output)
+start = time.perf_counter()
+combined = extract_in_reading_order(pdf_path, str(out_dir))
+(out_dir / "combined.md").write_text(combined, encoding="utf-8")
+t_combined = time.perf_counter() - start
+print(f"Combined reading-order file written in {t_combined:.1f}s")
