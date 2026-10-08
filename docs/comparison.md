@@ -7,7 +7,7 @@
 - **No single tool handled every kind of content.** Each approach failed somewhere that another one succeeded, which is why the recommendation at the end is a combination.
 - **Open-source libraries (pypdf, pdfplumber, OCR)** were the fastest and gave us the only saved image files. But on research papers, the **tables were not aligned properly even after we added several table-detection strategies**, and **two-column text was not extracted in the right order**. This carried into the Markdown we built from them. On one of the three PDFs, the output did not render properly at all.
 - **MarkItDown** behaved much like the open-source libraries, as a better version of them: easy to use and fast, with better output than raw pypdf, but with the same weaknesses on complex layouts.
-- **Docling** was by far the **slowest** tool (218.7 s against 6.5 s for MarkItDown on the same 5-page paper).
+- **Docling** was by far the **slowest** tool on PDFs: 218.7 s, 1,534.0 s (about 25.6 minutes) and 117.1 s for our three papers, against 6.5 s, 8.8 s and 1.6 s for MarkItDown. On HTML web pages, however, Docling took only 0.4 to 4.9 s, close to MarkItDown, because its slow AI layout models are used for PDFs.
 - **Azure AI Document Intelligence** produced the most content per document and read the text inside images accurately, but it gave **no image extraction at all**. The text it read from images was **meaningless when viewed as a whole**, because it came out as detached fragments with no link to what the figure shows. Some **textured images had symbols that did not match the original exactly**.
 - The cost of all three approaches was very low for this prototype: about 43 Azure pages out of the 500 free pages per month.
 
@@ -54,7 +54,7 @@ For web pages, Azure cannot read a live URL, so each page was first printed to P
 - Still weak on complex layouts, because it mainly works from the text layer of the PDF. It does not extract PDF images by itself (we added them back with our pdfplumber step).
 
 **Docling**
-- The main problem we hit was **processing time**: 218.7 s for paperA, far beyond every other tool (see section 4).
+- The main problem we hit was **processing time on PDFs**: 218.7 s for paperA (5 pages), 1,534.0 s for paperB (11 pages) and 117.1 s for paperC (5 pages), far beyond every other tool (see section 4). On the three HTML pages Docling was fast (4.9 s, 0.4 s and 4.0 s).
 
 **Azure AI Document Intelligence**
 - Produced the largest Markdown output on every document (section 3.2).
@@ -119,31 +119,35 @@ Each cell is marked **(O)** if we observed it in this project, or **(D)** if it 
 | Document | Pages | pypdf text | pdfplumber tables + images | OCR on saved images | Open-source combined reading-order file | Azure | Docling | MarkItDown |
 |---|---|---|---|---|---|---|---|---|
 | paperA | 5 | 0.5 | 5.3 | 5.1 | 6.6 | 22.7 | 218.7 | 6.5 |
-| paperB | 11 | 0.8 | 6.2 | 5.8 | 12.3 | 61.9 | 1534.0 | 8.8 |
+| paperB | 11 | 0.8 | 6.2 | 5.8 | 12.3 | 61.9 | 1,534.0 | 8.8 |
 | paperC | 5 | 0.4 | 1.1 | 1.5 | 2.4 | 16.1 | 117.1 | 1.6 |
+| **Total** | **21** | **1.7** | **12.6** | **12.4** | **21.3** | **100.7** | **1,869.8** | **16.9** |
 
-Docling and MarkItDown were timed on paperA only in the recorded run; the other two documents were converted without their times being recorded.
+Per page, across the three PDFs: open-source combined output 1.0 s, MarkItDown 0.8 s, Azure 4.8 s, **Docling 89.0 s**.
 
 - **Open-source** was the fastest: plain text took under a second for every PDF. Table and image extraction took 1 to 6 seconds, and OCR added a similar amount.
-- **MarkItDown** took 6.5 s on paperA. Most of that is our own pdfplumber step that crops and saves the images (about 5.3 s, from the table above), so MarkItDown's own conversion took only about a second.
-- **Docling** took 218.7 s on paperA, which is **about 34 times slower than MarkItDown**. paperA was the first document of the run, so this figure includes loading Docling's AI models. The start-up log showed the OCR models and two large transformer models being loaded. Even so, Docling was clearly the slowest tool in every run.
+- **MarkItDown** took 1.6 to 8.8 s per paper. Most of that is our own pdfplumber step that crops and saves the images (5.3 s, 6.2 s and 1.1 s in the table above), so MarkItDown's own conversion took only about 0.5 to 2.6 seconds per paper.
+- **Docling** was **about 34 times slower than MarkItDown on paperA, about 174 times slower on paperB, and about 73 times slower on paperC**. paperB, an 11-page paper full of tables and figures, took 1,534.0 s, which is about 25.6 minutes (139.5 s per page). paperA was the first document of its run, so its 218.7 s includes loading Docling's AI models (the start-up log showed OCR models and two large transformer models loading), which is consistent with paperC, also 5 pages, finishing in 117.1 s. Overall Docling was about 18.6 times slower than Azure on the same 21 pages.
 - **Azure** took 3 to 6 seconds per page: 22.7 s for 5 pages (4.5 s per page), 61.9 s for 11 pages (5.6 s per page) and 16.1 s for 5 pages (3.2 s per page). This time includes upload, waiting for the result, and our splitting into two-page requests, but does not depend on the speed of the local machine.
 
 ### 4.2 Web pages
 
-| Page | Open-source scrape (s) | Azure pages sent | Azure Markdown (characters) | Azure time (s) |
-|---|---|---|---|---|
-| web1 | 9.5 | 7 (earlier test with 5 pages: 14,592 characters, 16.5 s) | 20,946 | 26.9 |
-| web2 | 1.6 | 4 | 8,293 | 11.5 |
-| web3 | 10.2 | 6 | 66,699 | 28.8 |
+| Page | Open-source scrape (s) | MarkItDown (s) | Docling (s) | Azure pages sent | Azure Markdown (characters) | Azure time (s) |
+|---|---|---|---|---|---|---|
+| web1 | 9.5 | 1.4 | 4.9 | 7 (earlier test with 5 pages: 14,592 characters, 16.5 s) | 20,946 | 26.9 |
+| web2 | 1.6 | 0.2 | 0.4 | 4 | 8,293 | 11.5 |
+| web3 | 10.2 | 1.4 | 4.0 | 6 | 66,699 | 28.8 |
 
-web3 (the periodic table) produced the most Azure output (66,699 characters from only 6 pages) because it is dominated by large tables.
+The open-source scrape time includes fetching the page and downloading up to 15 images. MarkItDown and Docling were run on HTML files that had already been saved, so their times exclude downloading and are not directly comparable with the scrape time.
+
+- On web pages, **Docling was only 2 to 3.5 times slower than MarkItDown** (0.4 s against 0.2 s, 4.0 s against 1.4 s, 4.9 s against 1.4 s). This is a sharp contrast with PDFs, where it was 34 to 174 times slower, because HTML already carries its own structure and does not need the AI layout models.
+- web3 (the periodic table) produced the most Azure output (66,699 characters from only 6 pages) because it is dominated by large tables.
 
 ### 4.3 Pros and cons for performance
 
 - **Open-source libraries:** fastest and the lightest on memory. OCR is the slowest part of that pipeline because every image is processed separately.
-- **MarkItDown:** very fast and suitable for interactive use.
-- **Docling:** too slow for interactive use on a CPU. A GPU or a long-running server that keeps the models loaded would help, but it needs more resources.
+- **MarkItDown:** very fast on both PDFs (1.6 to 8.8 s) and web pages (0.2 to 1.4 s), and suitable for interactive use.
+- **Docling:** unusable for interactive use on PDFs on a CPU (up to 25.6 minutes for an 11-page paper), but quick on HTML (0.4 to 4.9 s). A GPU or a long-running server that keeps the models loaded would help for PDFs, but it needs more resources, and PDFs would need to be processed as background jobs.
 - **Azure:** moderate per-page speed that does not depend on your hardware, and many documents can be sent in parallel. The two-page splitting we needed on the free tier added extra waiting.
 
 ---
@@ -155,7 +159,7 @@ web3 (the periodic table) produced the most Azure output (66,699 characters from
 | Setup | `pip install`, plus installing the Tesseract OCR program and configuring its path | `pip install` | `pip install` with a very large download, plus model files on the first run | Azure account, resource, endpoint and key, SDK |
 | Code we had to write | The most: text, tables with fallback strategies, image cropping, OCR, web scraping, link and file handling | A few lines, plus our own image step for PDFs | A few lines | A short function plus the two-page splitting logic |
 | Debugging | Easy to see what happened, but each problem needs custom code | Easy | Harder: long start-up logs and model warnings | Depends on service responses |
-| Problems we hit | Table detection kept failing on research-paper tables; Wikipedia returned **403 Forbidden** until we sent a proper User-Agent | The same 403 on Wikipedia; no PDF images | Very slow; web pages had to be downloaded as HTML first | Free tier reads two pages per request, so documents had to be split; web pages had to be printed to PDF first |
+| Problems we hit | Table detection kept failing on research-paper tables; Wikipedia returned **403 Forbidden** until we sent a proper User-Agent | The same 403 on Wikipedia; no PDF images | Very slow on PDFs (up to 25.6 minutes for an 11-page paper); web pages had to be downloaded as HTML first | Free tier reads two pages per request, so documents had to be split; web pages had to be printed to PDF first |
 
 Other practical points from this project:
 - Saving `pip freeze` output from Windows PowerShell created a UTF-16 file, which needed to be re-saved as UTF-8 before it could be used for deployment.
@@ -191,12 +195,12 @@ Azure prices change, so confirm the current per-page rate on Azure's pricing pag
 
 **Self-hosted cost estimate from our measurements.** Using `cost per 1,000 pages = (seconds per page × 1,000 ÷ 3,600) × server price per hour` and an assumed server price of $0.10 per hour:
 
-| Tool | Measured | Seconds per page | Hours per 1,000 pages | Estimated cost per 1,000 pages |
+| Tool | Measured (3 PDFs, 21 pages) | Seconds per page | Hours per 1,000 pages | Estimated cost per 1,000 pages |
 |---|---|---|---|---|
-| MarkItDown | 6.5 s for 5 pages | 1.3 | 0.36 | about $0.04 |
-| Docling | 218.7 s for 5 pages | 43.7 | 12.2 | about $1.20 |
+| MarkItDown | 16.9 s | 0.8 | 0.22 | about $0.02 |
+| Docling | 1,869.8 s | 89.0 | 24.7 | about $2.50 |
 
-Docling is cheaper per page than Azure at scale, but it needs many hours of server time for every 1,000 pages on a CPU. A faster machine or GPU would reduce that.
+Docling is cheaper per page than Azure at scale (about $2.50 against an indicative $10 per 1,000 pages), but it needs about 25 hours of server time for every 1,000 pages on a CPU like ours, so the real constraint is time rather than money. A faster machine or a GPU would reduce that.
 
 **Pros and cons for cost**
 - Open-source and MarkItDown are the cheapest per page.
@@ -228,12 +232,13 @@ Docling is cheaper per page than Azure at scale, but it needs many hours of serv
 
 | | Docling | MarkItDown |
 |---|---|---|
-| Speed | Very slow: 218.7 s for paperA (including model loading) | Fast: 6.5 s for paperA, about 1 s of it MarkItDown itself |
-| Behaviour on our documents | Not measured on the other documents in the recorded run | Behaved much like the open-source libraries, but as a better, cleaner version |
+| Speed on PDFs | Very slow: 218.7 s, 1,534.0 s and 117.1 s (89.0 s per page overall) | Fast: 6.5 s, 8.8 s and 1.6 s (0.8 s per page overall), most of it our own image step |
+| Speed on web pages | Fast: 4.9 s, 0.4 s and 4.0 s | Fast: 1.4 s, 0.2 s and 1.4 s |
+| Behaviour on our documents | Time was the main problem we observed | Behaved much like the open-source libraries, but as a better, cleaner version |
 | Images | Can export picture images | None from PDFs by itself; we add them back with pdfplumber |
 | Install and hosting | Heavy: PyTorch, large model downloads, several GB of memory | Light, easy to host, which is why it powers the live API |
 | Integration | Needs a long-running server or job queue | Easy to call inside a web request |
-| Best used for | Complex PDFs when processing time does not matter | Quick conversions of web pages and simple documents |
+| Best used for | Complex PDFs run as background batch jobs, where minutes per document are acceptable | Quick conversions of web pages and simple documents, and interactive requests |
 
 ---
 
@@ -256,7 +261,7 @@ Docling is cheaper per page than Azure at scale, but it needs many hours of serv
 No single tool did everything well in our tests, so the recommended pipeline combines them:
 
 1. **Web pages:** use BeautifulSoup when precise control of the HTML is needed, and MarkItDown for fast Markdown. Both were fast (1.6 to 10.2 s per page) and reliable on HTML tables.
-2. **Complex PDFs such as research papers:** use a layout-aware tool, because the open-source libraries failed on two-column text and tables. Choose **Azure** for interactive and low-volume work (about 3 to 6 seconds per page, no servers to run, 500 free pages per month) and **Docling** when data must stay in-house or volume is high enough that compute time is cheaper than per-page fees (about 44 seconds per page on our CPU, so it should run in the background on a stronger server).
+2. **Complex PDFs such as research papers:** use a layout-aware tool, because the open-source libraries failed on two-column text and tables. Choose **Azure** for interactive and low-volume work (about 3 to 6 seconds per page, no servers to run, 500 free pages per month) and **Docling** only when data must stay in-house or volume is high enough that compute is cheaper than per-page fees. Docling averaged 89 seconds per page on our CPU, and an 11-page paper took about 25.6 minutes, so it must run as a background job on a stronger server, ideally with a GPU.
 3. **Always add pdfplumber for images.** Azure returned no image files, and MarkItDown returns none from PDFs. Store the saved image next to any text read from it, with the caption, so the text keeps its meaning.
 4. **Keep MarkItDown as the lightweight default** for the hosted API and for simple documents. It is easy to deploy and in our experience was a better version of the open-source approach.
 5. **Keep OCR for image-only content,** but treat its output as supporting text, not as a faithful copy of the figure. Symbols in textured images may not match exactly, so check important values.
@@ -269,7 +274,7 @@ If the startup had to choose one tool today, the best single choice for research
 
 - The test set is small: three PDFs (one of them a synthetic test document) and three web pages. The findings are indicative, not statistical.
 - Quality was judged by inspecting the output next to the original documents, not by an automated accuracy score.
-- Docling and MarkItDown were timed only on paperA in the recorded run. Docling's time includes loading its models, and MarkItDown's time includes our image-cropping step.
+- Each Docling and MarkItDown time is a single run, not an average. paperA was the first document of its run, so its Docling time includes loading the models. MarkItDown's PDF times include our image-cropping step. Docling and MarkItDown web-page times exclude downloading, because the pages had already been saved as HTML.
 - Azure ran on the free tier, which reads two pages per request, so tables that cross a request boundary were split. A paid tier would likely do better on those tables.
 - Azure web-page runs used PDF prints of the pages with a page cap (7, 4 and 6 pages), so they cover only the first part of each page.
 - Timings come from one laptop and one network connection, with no GPU.
@@ -286,5 +291,6 @@ python run_task1_azure.py data/pdfs/paperA.pdf  # Azure Document Intelligence
 python run_task2.py                             # web scraping with requests + BeautifulSoup
 python download_pages.py                        # save pages as HTML for Docling and MarkItDown
 python run_task4.py                             # Docling and MarkItDown on every input
+python run_task4.py web2                        # or on a single input by name (paperA, web1, ...)
 python run_task5.py                             # upload outputs to the S3 bucket
 ```
