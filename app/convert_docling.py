@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 from pathlib import Path
 
 from docling.datamodel.base_models import InputFormat
@@ -5,7 +7,7 @@ from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling_core.types.doc import ImageRefMode
 
-
+@lru_cache(maxsize=1)
 def make_converter() -> DocumentConverter:
     options = PdfPipelineOptions()
     options.do_table_structure = True        # rebuild tables
