@@ -72,6 +72,11 @@ def download_page(url: str) -> bytes:
 def health():
     return {"status": "ok"}
 
+@app.get("/")
+def root():
+    return {"service": "Unstructured Data Ingestion API",
+            "docs": "/docs", "health": "/health", "tools": "/tools"}
+
 @app.get("/tools")
 def tools():
     return {"tools": available_tools()}
