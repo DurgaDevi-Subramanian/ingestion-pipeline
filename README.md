@@ -138,6 +138,6 @@ https://en.wikipedia.org/wiki/Periodic_table
 
 ## Cost and cleanup
 
-Built to stay under $5 using free tiers, budget alerts, and a small S3 footprint.
+Built using free tiers for budget alerts, and a small S3 footprint.
 After use, delete the Render service, empty and delete the S3 bucket, delete the IAM access
 key, and delete the Azure resource group.
